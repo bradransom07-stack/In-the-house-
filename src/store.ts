@@ -125,12 +125,21 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 45,
       priority: 'high',
       recurrence: 'daily',
+      lockedPersonId: gina.id,
     }),
     base({
       title: 'Fix leaking kitchen tap',
       category: 'maintenance',
       durationMinutes: 30,
       priority: 'low',
+    }),
+    base({
+      title: 'Pay bills',
+      category: 'other',
+      durationMinutes: 15,
+      priority: 'medium',
+      recurrence: 'weekly',
+      lockedPersonId: trish.id,
     }),
     base({
       title: 'Walk Snoop Dog',
