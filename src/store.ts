@@ -27,12 +27,17 @@ function seedPeople(): SeedPeople {
     name: 'Gina',
     role: 'helper',
     color: '#0ea5e9',
+    // Roughly a 12-hour ad hoc day (5:30am-5:30pm), minus the specific fixed
+    // commitments we know about: Thursday's 8-9am late-start school run, and
+    // Tuesday's 2:20-3:20pm pickup for Bella.
     availability: [
-      win(1, '05:30', '15:00'), // Mon — starts with breakfast (5:30am), kids leave for school 6:30am
-      win(2, '05:30', '14:20'), // Tue — leaves early for Bella's 2:20pm pickup
-      win(3, '05:30', '15:00'), // Wed
-      win(4, '05:30', '15:00'), // Thu — includes the Thursday 8-9am late-start school run
-      win(5, '05:30', '15:00'), // Fri
+      win(1, '05:30', '17:30'), // Mon
+      win(2, '05:30', '14:20'), // Tue (part 1) — before Bella's pickup
+      win(2, '15:20', '17:30'), // Tue (part 2) — after Bella's pickup
+      win(3, '05:30', '17:30'), // Wed
+      win(4, '05:30', '08:00'), // Thu (part 1) — before the late-start school run
+      win(4, '09:00', '17:30'), // Thu (part 2) — after the late-start school run
+      win(5, '05:30', '17:30'), // Fri
     ],
   }
   const trish: Person = {
