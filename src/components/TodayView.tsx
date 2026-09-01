@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useHousehold } from '../store'
 import { Badge, Card, PersonDot } from './ui'
-import { categoryMeta, priorityMeta } from '../lib/constants'
+import { categoryMeta, priorityMeta, MEAL_TYPES } from '../lib/constants'
 import { formatTime, todayISO, WEEKDAY_LABELS_LONG, durationLabel } from '../lib/dates'
 import { completionKey } from '../types'
 import { getDay } from 'date-fns'
@@ -12,9 +12,14 @@ export function TodayView() {
   const schedule = useHousehold((s) => s.schedule)
   const completions = useHousehold((s) => s.completions)
   const toggleCompletion = useHousehold((s) => s.toggleCompletion)
+  const meals = useHousehold((s) => s.meals)
 
   const today = todayISO()
   const weekdayLabel = WEEKDAY_LABELS_LONG[getDay(new Date())]
+  const todaysMeals = MEAL_TYPES.map((mt) => ({
+    ...mt,
+    entry: meals.find((m) => m.date === today && m.mealType === mt.value),
+  })).filter((m) => m.entry)
 
   const todaysSlots = useMemo(
     () => schedule.filter((sl) => sl.date === today).sort((a, b) => a.start.localeCompare(b.start)),
@@ -43,6 +48,21 @@ export function TodayView() {
             : `${todaysSlots.length} job${todaysSlots.length === 1 ? '' : 's'} planned today`}
         </p>
       </div>
+
+      {todaysMeals.length > 0 && (
+        <Card className="p-3">
+          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            {todaysMeals.map((m) => (
+              <span key={m.value}>
+                <span className="text-slate-400">
+                  {m.emoji} {m.label}:
+                </span>{' '}
+                <span className="font-medium text-slate-800 dark:text-slate-100">{m.entry!.title}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {people.map((person) => {

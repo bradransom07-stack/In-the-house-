@@ -59,6 +59,28 @@ export interface ScheduledSlot {
   end: string // ISO datetime
 }
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner'
+
+export interface MealPlanEntry {
+  id: string
+  /** yyyy-MM-dd */
+  date: string
+  mealType: MealType
+  title: string
+  notes: string
+}
+
+export type ShoppingCategory = 'produce' | 'dairy' | 'meat' | 'bakery' | 'pantry' | 'household' | 'other'
+
+export interface ShoppingItem {
+  id: string
+  name: string
+  quantity: string
+  category: ShoppingCategory
+  checked: boolean
+  addedAt: string
+}
+
 export interface HouseholdState {
   people: Person[]
   jobs: Job[]
@@ -66,6 +88,8 @@ export interface HouseholdState {
   /** key = `${jobId}__${date}` */
   completions: Record<string, boolean>
   lastOptimizedAt: string | null
+  meals: MealPlanEntry[]
+  shoppingList: ShoppingItem[]
 }
 
 export const completionKey = (jobId: string, date: string) => `${jobId}__${date}`

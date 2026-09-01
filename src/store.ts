@@ -5,8 +5,10 @@ import type {
   AvailabilityWindow,
   HouseholdState,
   Job,
+  MealType,
   Person,
   ScheduledSlot,
+  ShoppingCategory,
 } from './types'
 import { completionKey } from './types'
 
@@ -154,6 +156,15 @@ interface HouseholdActions {
   removeSlot: (slotId: string) => void
 
   toggleCompletion: (jobId: string, date: string) => void
+
+  /** Upserts the meal for a date+mealType; clearing both title and notes removes the entry. */
+  setMeal: (date: string, mealType: MealType, title: string, notes?: string) => void
+  removeMeal: (id: string) => void
+
+  addShoppingItem: (item: { name: string; quantity?: string; category?: ShoppingCategory }) => void
+  toggleShoppingItem: (id: string) => void
+  removeShoppingItem: (id: string) => void
+  clearCheckedShoppingItems: () => void
 }
 
 export type HouseholdStore = HouseholdState & HouseholdActions
@@ -168,6 +179,8 @@ export const useHousehold = create<HouseholdStore>()(
       schedule: [],
       completions: {},
       lastOptimizedAt: null,
+      meals: [],
+      shoppingList: [],
 
       addPerson: (p) =>
         set((s) => ({
@@ -234,6 +247,37 @@ export const useHousehold = create<HouseholdStore>()(
           const key = completionKey(jobId, date)
           return { completions: { ...s.completions, [key]: !s.completions[key] } }
         }),
+
+      setMeal: (date, mealType, title, notes = '') =>
+        set((s) => {
+          const existing = s.meals.find((m) => m.date === date && m.mealType === mealType)
+          if (!title.trim() && !notes.trim()) {
+            return { meals: existing ? s.meals.filter((m) => m.id !== existing.id) : s.meals }
+          }
+          if (existing) {
+            return {
+              meals: s.meals.map((m) => (m.id === existing.id ? { ...m, title, notes } : m)),
+            }
+          }
+          return { meals: [...s.meals, { id: uuid(), date, mealType, title, notes }] }
+        }),
+      removeMeal: (id) => set((s) => ({ meals: s.meals.filter((m) => m.id !== id) })),
+
+      addShoppingItem: ({ name, quantity = '', category = 'other' }) =>
+        set((s) => ({
+          shoppingList: [
+            ...s.shoppingList,
+            { id: uuid(), name, quantity, category, checked: false, addedAt: new Date().toISOString() },
+          ],
+        })),
+      toggleShoppingItem: (id) =>
+        set((s) => ({
+          shoppingList: s.shoppingList.map((i) => (i.id === id ? { ...i, checked: !i.checked } : i)),
+        })),
+      removeShoppingItem: (id) =>
+        set((s) => ({ shoppingList: s.shoppingList.filter((i) => i.id !== id) })),
+      clearCheckedShoppingItems: () =>
+        set((s) => ({ shoppingList: s.shoppingList.filter((i) => !i.checked) })),
     }),
     { name: 'in-the-house-store' },
   ),

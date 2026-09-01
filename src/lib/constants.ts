@@ -1,4 +1,4 @@
-import type { JobCategory, Priority } from '../types'
+import type { JobCategory, MealType, Priority, ShoppingCategory } from '../types'
 
 export const CATEGORIES: { value: JobCategory; label: string; emoji: string }[] = [
   { value: 'cleaning', label: 'Cleaning', emoji: '🧹' },
@@ -28,6 +28,22 @@ export const PRIORITIES: { value: Priority; label: string; classes: string }[] =
 ]
 
 export const priorityMeta = (p: Priority) => PRIORITIES.find((x) => x.value === p) ?? PRIORITIES[1]
+
+export const MEAL_TYPES: { value: MealType; label: string; emoji: string }[] = [
+  { value: 'breakfast', label: 'Breakfast', emoji: '🥣' },
+  { value: 'lunch', label: 'Lunch', emoji: '🥪' },
+  { value: 'dinner', label: 'Dinner', emoji: '🍽️' },
+]
+
+export const SHOPPING_CATEGORIES: { value: ShoppingCategory; label: string; emoji: string }[] = [
+  { value: 'produce', label: 'Produce', emoji: '🥦' },
+  { value: 'dairy', label: 'Dairy', emoji: '🥛' },
+  { value: 'meat', label: 'Meat & fish', emoji: '🥩' },
+  { value: 'bakery', label: 'Bakery', emoji: '🍞' },
+  { value: 'pantry', label: 'Pantry', emoji: '🥫' },
+  { value: 'household', label: 'Household', emoji: '🧻' },
+  { value: 'other', label: 'Other', emoji: '📦' },
+]
 
 export const PERSON_COLORS = [
   '#0ea5e9',
