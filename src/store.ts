@@ -11,6 +11,7 @@ import type {
   ShoppingCategory,
 } from './types'
 import { completionKey } from './types'
+import { toHHmm, toMinutes } from './lib/schedule'
 
 const win = (day: AvailabilityWindow['day'], start: string, end: string): AvailabilityWindow => ({
   id: uuid(),
@@ -198,6 +199,8 @@ interface HouseholdActions {
 
   setSchedule: (slots: ScheduledSlot[]) => void
   reassignSlot: (slotId: string, personId: string) => void
+  /** Manually pins a slot to start at a specific time ("HH:mm"), keeping the job's duration. */
+  rescheduleSlot: (slotId: string, newStart: string) => void
   removeSlot: (slotId: string) => void
 
   toggleCompletion: (jobId: string, date: string) => void
@@ -284,6 +287,20 @@ export const useHousehold = create<HouseholdStore>()(
         set((s) => ({
           schedule: s.schedule.map((sl) => (sl.id === slotId ? { ...sl, personId } : sl)),
         })),
+      rescheduleSlot: (slotId, newStart) =>
+        set((s) => {
+          const slot = s.schedule.find((sl) => sl.id === slotId)
+          const job = slot && s.jobs.find((j) => j.id === slot.jobId)
+          if (!slot || !job) return {}
+          const endHHmm = toHHmm(toMinutes(newStart) + job.durationMinutes)
+          return {
+            schedule: s.schedule.map((sl) =>
+              sl.id === slotId
+                ? { ...sl, start: `${sl.date}T${newStart}:00`, end: `${sl.date}T${endHHmm}:00` }
+                : sl,
+            ),
+          }
+        }),
       removeSlot: (slotId) =>
         set((s) => ({ schedule: s.schedule.filter((sl) => sl.id !== slotId) })),
 

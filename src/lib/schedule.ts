@@ -5,12 +5,12 @@ import { completionKey } from '../types'
 
 const priorityWeight: Record<Job['priority'], number> = { high: 3, medium: 2, low: 1 }
 
-const toMinutes = (hhmm: string) => {
+export const toMinutes = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number)
   return h * 60 + m
 }
 
-const toHHmm = (mins: number) => {
+export const toHHmm = (mins: number) => {
   const h = Math.floor(mins / 60)
     .toString()
     .padStart(2, '0')

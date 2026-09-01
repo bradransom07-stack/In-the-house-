@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useHousehold } from '../store'
 import { Badge, Button, Card, PersonDot } from './ui'
 import { categoryMeta, priorityMeta } from '../lib/constants'
-import { durationLabel, formatDateLabel, formatTime, horizonDates } from '../lib/dates'
+import { durationLabel, formatDateLabel, horizonDates } from '../lib/dates'
 import { optimizeSchedule, type OptimizeResult } from '../lib/schedule'
 import { completionKey } from '../types'
 
@@ -15,6 +15,7 @@ export function WeekView() {
   const completions = useHousehold((s) => s.completions)
   const setSchedule = useHousehold((s) => s.setSchedule)
   const reassignSlot = useHousehold((s) => s.reassignSlot)
+  const rescheduleSlot = useHousehold((s) => s.rescheduleSlot)
   const removeSlot = useHousehold((s) => s.removeSlot)
   const toggleCompletion = useHousehold((s) => s.toggleCompletion)
 
@@ -129,7 +130,12 @@ export function WeekView() {
                           onChange={() => toggleCompletion(job.id, slot.date)}
                           className="h-4 w-4"
                         />
-                        <span className="w-14 shrink-0 text-xs text-slate-400">{formatTime(slot.start)}</span>
+                        <input
+                          type="time"
+                          value={slot.start.slice(11, 16)}
+                          onChange={(e) => e.target.value && rescheduleSlot(slot.id, e.target.value)}
+                          className="w-[5.5rem] shrink-0 rounded border border-slate-300 bg-transparent px-1 py-0.5 text-xs dark:border-slate-600"
+                        />
                         <span
                           className={done ? 'flex-1 truncate line-through text-slate-400' : 'flex-1 truncate'}
                         >
