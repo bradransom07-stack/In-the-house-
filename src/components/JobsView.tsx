@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useHousehold } from '../store'
 import { Badge, Button, Card } from './ui'
 import { categoryMeta, priorityMeta } from '../lib/constants'
-import { durationLabel } from '../lib/dates'
+import { durationLabel, formatHHmm, WEEKDAY_LABELS } from '../lib/dates'
 import { JobFormModal } from './JobFormModal'
 import type { Job } from '../types'
 
@@ -48,16 +48,14 @@ export function JobsView() {
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                   <span>{durationLabel(job.durationMinutes)}</span>
-                  {job.dueDate && <span>Due {job.dueDate}</span>}
-                  {job.lockedPersonId ? (
-                    <span className="flex items-center gap-1">
-                      Locked to {personName(job.lockedPersonId)}
-                    </span>
-                  ) : job.eligiblePersonIds.length > 0 ? (
-                    <span>Only: {job.eligiblePersonIds.map(personName).join(', ')}</span>
-                  ) : (
-                    <span>Anyone</span>
+                  {job.recurrence === 'weekly' && job.weekday !== null && (
+                    <span>Every {WEEKDAY_LABELS[job.weekday]}</span>
                   )}
+                  {job.recurrence === 'none' && (
+                    <span>{job.dueDate ? `On ${job.dueDate}` : 'No date set'}</span>
+                  )}
+                  {job.time && <span>{formatHHmm(job.time)}</span>}
+                  <span>Assigned to {personName(job.assignedPersonId) ?? 'nobody (removed)'}</span>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1">

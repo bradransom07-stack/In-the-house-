@@ -21,9 +21,9 @@ export const formatDateLabel = (iso: string) => {
   return format(d, 'EEE d MMM')
 }
 
-export const formatTime = (isoDateTime: string) => {
-  const timePart = isoDateTime.split('T')[1] ?? ''
-  const [h, m] = timePart.split(':')
+/** Formats a plain "HH:mm" string (e.g. from Job.time) as "6:00pm". */
+export const formatHHmm = (hhmm: string) => {
+  const [h, m] = hhmm.split(':')
   const hour = Number(h)
   const suffix = hour >= 12 ? 'pm' : 'am'
   const hour12 = hour % 12 === 0 ? 12 : hour % 12
@@ -35,4 +35,17 @@ export const durationLabel = (minutes: number) => {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   return m === 0 ? `${h}h` : `${h}h ${m}m`
+}
+
+export const toMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+export const toHHmm = (mins: number) => {
+  const h = Math.floor(mins / 60)
+    .toString()
+    .padStart(2, '0')
+  const m = (mins % 60).toString().padStart(2, '0')
+  return `${h}:${m}`
 }

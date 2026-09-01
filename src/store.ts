@@ -1,87 +1,39 @@
+import { addDays, format } from 'date-fns'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuid } from 'uuid'
 import type {
-  AvailabilityWindow,
   HouseholdState,
+  InstanceOverride,
   Job,
   MealType,
   Person,
-  ScheduledSlot,
   ShoppingCategory,
 } from './types'
 import { completionKey } from './types'
-import { toHHmm, toMinutes } from './lib/schedule'
-
-const win = (day: AvailabilityWindow['day'], start: string, end: string): AvailabilityWindow => ({
-  id: uuid(),
-  day,
-  start,
-  end,
-})
 
 type SeedPeople = [gina: Person, trish: Person, brad: Person, jack: Person, bella: Person]
 
 function seedPeople(): SeedPeople {
-  const gina: Person = {
-    id: uuid(),
-    name: 'Gina',
-    role: 'helper',
-    color: '#0ea5e9',
-    // An ad hoc day from 5:30am to ~7pm — quiet mid-day rest once everyone's
-    // out, minus the specific fixed commitments we know about: Thursday's
-    // 8-9am late-start school run, and Tuesday's 2:20-3:20pm Bella pickup.
-    availability: [
-      win(1, '05:30', '19:00'), // Mon
-      win(2, '05:30', '14:20'), // Tue (part 1) — before Bella's pickup
-      win(2, '15:20', '19:00'), // Tue (part 2) — after Bella's pickup
-      win(3, '05:30', '19:00'), // Wed
-      win(4, '05:30', '08:00'), // Thu (part 1) — before the late-start school run
-      win(4, '09:00', '19:00'), // Thu (part 2) — after the late-start school run
-      win(5, '05:30', '19:00'), // Fri
-    ],
-  }
-  const trish: Person = {
-    id: uuid(),
-    name: 'Trish',
-    role: 'family',
-    color: '#a855f7',
-    availability: [0, 6].map((d) => win(d as AvailabilityWindow['day'], '10:00', '12:00')),
-  }
-  const brad: Person = {
-    id: uuid(),
-    name: 'Brad',
-    role: 'family',
-    color: '#f97316',
-    availability: [0, 1, 2, 3, 4, 5, 6].map((d) => win(d as AvailabilityWindow['day'], '19:00', '20:30')),
-  }
-  // Jack and Bella start with no availability set — add windows in the People tab
-  // once you've decided which chores are age-appropriate for them.
-  const jack: Person = {
-    id: uuid(),
-    name: 'Jack',
-    role: 'family',
-    color: '#22c55e',
-    availability: [],
-  }
-  const bella: Person = {
-    id: uuid(),
-    name: 'Bella',
-    role: 'family',
-    color: '#ec4899',
-    availability: [],
-  }
+  const gina: Person = { id: uuid(), name: 'Gina', role: 'helper', color: '#0ea5e9' }
+  const trish: Person = { id: uuid(), name: 'Trish', role: 'family', color: '#a855f7' }
+  const brad: Person = { id: uuid(), name: 'Brad', role: 'family', color: '#f97316' }
+  const jack: Person = { id: uuid(), name: 'Jack', role: 'family', color: '#22c55e' }
+  const bella: Person = { id: uuid(), name: 'Bella', role: 'family', color: '#ec4899' }
   return [gina, trish, brad, jack, bella]
 }
 
-function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
-  const base = (partial: Partial<Job> & Pick<Job, 'title' | 'category' | 'durationMinutes' | 'priority'>): Job => ({
+function seedJobs([gina, trish, brad]: SeedPeople): Job[] {
+  const base = (
+    partial: Partial<Job> &
+      Pick<Job, 'title' | 'category' | 'durationMinutes' | 'priority' | 'assignedPersonId'>,
+  ): Job => ({
     id: uuid(),
     notes: '',
-    dueDate: null,
     recurrence: 'none',
-    eligiblePersonIds: [],
-    lockedPersonId: null,
+    weekday: null,
+    dueDate: null,
+    time: null,
     archived: false,
     createdAt: new Date().toISOString(),
     ...partial,
@@ -94,7 +46,8 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 45,
       priority: 'medium',
       recurrence: 'weekly',
-      lockedPersonId: gina.id,
+      weekday: 1, // Monday
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Laundry — wash & fold',
@@ -102,7 +55,8 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 60,
       priority: 'medium',
       recurrence: 'weekly',
-      lockedPersonId: gina.id,
+      weekday: 3, // Wednesday
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Grocery run',
@@ -110,7 +64,9 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 60,
       priority: 'high',
       recurrence: 'weekly',
-      eligiblePersonIds: [trish.id, brad.id],
+      weekday: 6, // Saturday
+      notes: 'Usually Trish or Brad — reassign per week from the Schedule tab if it swaps.',
+      assignedPersonId: trish.id,
     }),
     base({
       title: 'Kids bedtime routine',
@@ -118,7 +74,9 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 30,
       priority: 'high',
       recurrence: 'daily',
-      eligiblePersonIds: [trish.id, brad.id],
+      time: '19:00',
+      notes: 'Usually Trish or Brad — reassign per day from the Schedule tab if it swaps.',
+      assignedPersonId: trish.id,
     }),
     base({
       title: 'Cook dinner',
@@ -126,13 +84,17 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 45,
       priority: 'high',
       recurrence: 'daily',
-      lockedPersonId: gina.id,
+      time: '18:00',
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Fix leaking kitchen tap',
       category: 'maintenance',
       durationMinutes: 30,
       priority: 'low',
+      recurrence: 'none',
+      dueDate: format(addDays(new Date(), 2), 'yyyy-MM-dd'),
+      assignedPersonId: brad.id,
     }),
     base({
       title: 'Pay bills',
@@ -140,7 +102,9 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 15,
       priority: 'medium',
       recurrence: 'weekly',
-      lockedPersonId: trish.id,
+      weekday: 2, // Tuesday
+      time: '09:00',
+      assignedPersonId: trish.id,
     }),
     base({
       title: 'Walk Snoop Dog (morning)',
@@ -148,7 +112,8 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 20,
       priority: 'high',
       recurrence: 'daily',
-      lockedPersonId: gina.id,
+      time: '07:00',
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Walk Snoop Dog (afternoon)',
@@ -156,7 +121,8 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 20,
       priority: 'high',
       recurrence: 'daily',
-      lockedPersonId: gina.id,
+      time: '13:00',
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Walk Snoop Dog (evening)',
@@ -164,7 +130,8 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 20,
       priority: 'high',
       recurrence: 'daily',
-      lockedPersonId: gina.id,
+      time: '19:30',
+      assignedPersonId: gina.id,
     }),
     base({
       title: 'Feed Yupi Hamster',
@@ -172,36 +139,33 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       durationMinutes: 5,
       priority: 'medium',
       recurrence: 'daily',
-      eligiblePersonIds: [trish.id, brad.id, jack.id, bella.id],
+      assignedPersonId: brad.id,
     }),
     base({
-      title: "Plan tomorrow",
+      title: 'Plan tomorrow',
       notes: 'Sit down and think through what tomorrow needs: school runs, activities, meals, pickups.',
       category: 'other',
       durationMinutes: 15,
       priority: 'medium',
       recurrence: 'daily',
-      lockedPersonId: gina.id,
+      time: '19:45',
+      assignedPersonId: gina.id,
     }),
   ]
 }
 
 interface HouseholdActions {
-  addPerson: (p: Omit<Person, 'id' | 'availability'>) => void
+  addPerson: (p: Omit<Person, 'id'>) => void
   updatePerson: (id: string, patch: Partial<Omit<Person, 'id'>>) => void
   removePerson: (id: string) => void
-  addAvailability: (personId: string, w: Omit<AvailabilityWindow, 'id'>) => void
-  removeAvailability: (personId: string, windowId: string) => void
 
   addJob: (j: Omit<Job, 'id' | 'createdAt' | 'archived'>) => void
   updateJob: (id: string, patch: Partial<Omit<Job, 'id'>>) => void
   removeJob: (id: string) => void
 
-  setSchedule: (slots: ScheduledSlot[]) => void
-  reassignSlot: (slotId: string, personId: string) => void
-  /** Manually pins a slot to start at a specific time ("HH:mm"), keeping the job's duration. */
-  rescheduleSlot: (slotId: string, newStart: string) => void
-  removeSlot: (slotId: string) => void
+  /** Sets a one-off override (person/time/skip) for a single occurrence of a job. */
+  setInstanceOverride: (jobId: string, date: string, patch: InstanceOverride) => void
+  clearInstanceOverride: (jobId: string, date: string) => void
 
   toggleCompletion: (jobId: string, date: string) => void
 
@@ -224,16 +188,12 @@ export const useHousehold = create<HouseholdStore>()(
     (set) => ({
       people: initialPeople,
       jobs: seedJobs(initialPeople),
-      schedule: [],
+      overrides: {},
       completions: {},
-      lastOptimizedAt: null,
       meals: [],
       shoppingList: [],
 
-      addPerson: (p) =>
-        set((s) => ({
-          people: [...s.people, { ...p, id: uuid(), availability: [] }],
-        })),
+      addPerson: (p) => set((s) => ({ people: [...s.people, { ...p, id: uuid() }] })),
       updatePerson: (id, patch) =>
         set((s) => ({
           people: s.people.map((p) => (p.id === id ? { ...p, ...patch } : p)),
@@ -241,28 +201,6 @@ export const useHousehold = create<HouseholdStore>()(
       removePerson: (id) =>
         set((s) => ({
           people: s.people.filter((p) => p.id !== id),
-          jobs: s.jobs.map((j) => ({
-            ...j,
-            eligiblePersonIds: j.eligiblePersonIds.filter((pid) => pid !== id),
-            lockedPersonId: j.lockedPersonId === id ? null : j.lockedPersonId,
-          })),
-          schedule: s.schedule.filter((sl) => sl.personId !== id),
-        })),
-      addAvailability: (personId, w) =>
-        set((s) => ({
-          people: s.people.map((p) =>
-            p.id === personId
-              ? { ...p, availability: [...p.availability, { ...w, id: uuid() }] }
-              : p,
-          ),
-        })),
-      removeAvailability: (personId, windowId) =>
-        set((s) => ({
-          people: s.people.map((p) =>
-            p.id === personId
-              ? { ...p, availability: p.availability.filter((w) => w.id !== windowId) }
-              : p,
-          ),
         })),
 
       addJob: (j) =>
@@ -279,30 +217,24 @@ export const useHousehold = create<HouseholdStore>()(
       removeJob: (id) =>
         set((s) => ({
           jobs: s.jobs.filter((j) => j.id !== id),
-          schedule: s.schedule.filter((sl) => sl.jobId !== id),
+          overrides: Object.fromEntries(
+            Object.entries(s.overrides).filter(([key]) => !key.startsWith(`${id}__`)),
+          ),
         })),
 
-      setSchedule: (slots) => set({ schedule: slots, lastOptimizedAt: new Date().toISOString() }),
-      reassignSlot: (slotId, personId) =>
-        set((s) => ({
-          schedule: s.schedule.map((sl) => (sl.id === slotId ? { ...sl, personId } : sl)),
-        })),
-      rescheduleSlot: (slotId, newStart) =>
+      setInstanceOverride: (jobId, date, patch) =>
         set((s) => {
-          const slot = s.schedule.find((sl) => sl.id === slotId)
-          const job = slot && s.jobs.find((j) => j.id === slot.jobId)
-          if (!slot || !job) return {}
-          const endHHmm = toHHmm(toMinutes(newStart) + job.durationMinutes)
-          return {
-            schedule: s.schedule.map((sl) =>
-              sl.id === slotId
-                ? { ...sl, start: `${sl.date}T${newStart}:00`, end: `${sl.date}T${endHHmm}:00` }
-                : sl,
-            ),
-          }
+          const key = completionKey(jobId, date)
+          return { overrides: { ...s.overrides, [key]: { ...s.overrides[key], ...patch } } }
         }),
-      removeSlot: (slotId) =>
-        set((s) => ({ schedule: s.schedule.filter((sl) => sl.id !== slotId) })),
+      clearInstanceOverride: (jobId, date) =>
+        set((s) => {
+          const key = completionKey(jobId, date)
+          if (!(key in s.overrides)) return {}
+          const rest = { ...s.overrides }
+          delete rest[key]
+          return { overrides: rest }
+        }),
 
       toggleCompletion: (jobId, date) =>
         set((s) => {
@@ -341,6 +273,8 @@ export const useHousehold = create<HouseholdStore>()(
       clearCheckedShoppingItems: () =>
         set((s) => ({ shoppingList: s.shoppingList.filter((i) => !i.checked) })),
     }),
-    { name: 'in-the-house-store' },
+    // Bumped from 'in-the-house-store': the job/schedule shape changed (no more
+    // availability windows or optimizer output), so old persisted data can't be reused.
+    { name: 'in-the-house-store-v2' },
   ),
 )

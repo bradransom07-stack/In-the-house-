@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useHousehold } from '../store'
 import { Button } from './ui'
 import { CATEGORIES } from '../lib/constants'
-import type { Job, JobCategory, Priority, Recurrence } from '../types'
+import { WEEKDAY_LABELS_LONG } from '../lib/dates'
+import type { Job, JobCategory, Priority, Recurrence, Weekday } from '../types'
 
 interface Props {
   job?: Job
@@ -19,26 +20,25 @@ export function JobFormModal({ job, onClose }: Props) {
   const [category, setCategory] = useState<JobCategory>(job?.category ?? 'cleaning')
   const [duration, setDuration] = useState(job?.durationMinutes ?? 30)
   const [priority, setPriority] = useState<Priority>(job?.priority ?? 'medium')
-  const [dueDate, setDueDate] = useState(job?.dueDate ?? '')
   const [recurrence, setRecurrence] = useState<Recurrence>(job?.recurrence ?? 'none')
-  const [eligible, setEligible] = useState<string[]>(job?.eligiblePersonIds ?? [])
-  const [locked, setLocked] = useState<string>(job?.lockedPersonId ?? '')
-
-  const toggleEligible = (id: string) =>
-    setEligible((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+  const [weekday, setWeekday] = useState<Weekday>(job?.weekday ?? 1)
+  const [dueDate, setDueDate] = useState(job?.dueDate ?? '')
+  const [time, setTime] = useState(job?.time ?? '')
+  const [assignedPersonId, setAssignedPersonId] = useState(job?.assignedPersonId ?? people[0]?.id ?? '')
 
   const submit = () => {
-    if (!title.trim()) return
+    if (!title.trim() || !assignedPersonId) return
     const payload = {
       title: title.trim(),
       notes,
       category,
       durationMinutes: Math.max(5, duration),
       priority,
-      dueDate: dueDate || null,
       recurrence,
-      eligiblePersonIds: locked ? [] : eligible,
-      lockedPersonId: locked || null,
+      weekday: recurrence === 'weekly' ? weekday : null,
+      dueDate: recurrence === 'none' ? dueDate || null : null,
+      time: time || null,
+      assignedPersonId,
     }
     if (job) {
       updateJob(job.id, payload)
@@ -135,56 +135,63 @@ export function JobFormModal({ job, onClose }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">
-              {recurrence === 'none' ? 'Due date (optional)' : 'Anchor date (optional)'}
-            </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            {recurrence === 'weekly' && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Which day</label>
+                <select
+                  value={weekday}
+                  onChange={(e) => setWeekday(Number(e.target.value) as Weekday)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+                >
+                  {WEEKDAY_LABELS_LONG.map((label, d) => (
+                    <option key={d} value={d}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {recurrence === 'none' && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500">Date</label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+                />
+              </div>
+            )}
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Time (optional)</label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Lock to a specific person</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Assigned to</label>
             <select
-              value={locked}
-              onChange={(e) => setLocked(e.target.value)}
+              value={assignedPersonId}
+              onChange={(e) => setAssignedPersonId(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-600 dark:bg-slate-900"
             >
-              <option value="">— Not locked —</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-slate-400">
+              This is the default. A single day/week's occurrence can still be reassigned from the
+              Schedule tab.
+            </p>
           </div>
-
-          {!locked && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">
-                Who's eligible? (none checked = anyone)
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {people.map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex items-center gap-1.5 rounded-full border border-slate-300 px-2.5 py-1 text-xs dark:border-slate-600"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={eligible.includes(p.id)}
-                      onChange={() => toggleEligible(p.id)}
-                    />
-                    {p.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="mt-5 flex justify-end gap-2">

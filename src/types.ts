@@ -2,19 +2,11 @@ export type Role = 'helper' | 'family'
 
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6 // 0 = Sunday
 
-export interface AvailabilityWindow {
-  id: string
-  day: Weekday
-  start: string // "HH:mm"
-  end: string // "HH:mm"
-}
-
 export interface Person {
   id: string
   name: string
   role: Role
   color: string
-  availability: AvailabilityWindow[]
 }
 
 export type Priority = 'low' | 'medium' | 'high'
@@ -38,25 +30,26 @@ export interface Job {
   category: JobCategory
   durationMinutes: number
   priority: Priority
-  /** Date (yyyy-MM-dd) by which the job (or its first occurrence) should be done. Optional. */
-  dueDate: string | null
   recurrence: Recurrence
-  /** Person ids allowed to do this job. Empty array = anyone (helper or family). */
-  eligiblePersonIds: string[]
-  /** If set, this person is locked in and the optimizer won't reassign. */
-  lockedPersonId: string | null
+  /** For 'weekly' jobs: which weekday it happens. Unused otherwise. */
+  weekday: Weekday | null
+  /** For 'none' (one-off) jobs: the specific date (yyyy-MM-dd) it happens. Unused otherwise. */
+  dueDate: string | null
+  /** Optional fixed time ("HH:mm"). If unset, it's just an untimed to-do for that day. */
+  time: string | null
+  /** Who's responsible by default — always required, no more "eligible pool". */
+  assignedPersonId: string
   archived: boolean
   createdAt: string
 }
 
-export interface ScheduledSlot {
-  id: string
-  jobId: string
-  /** yyyy-MM-dd, the specific day this occurrence falls on */
-  date: string
-  personId: string
-  start: string // ISO datetime
-  end: string // ISO datetime
+/** A one-off exception to a job's default assignee/time/occurrence, keyed by jobId+date. */
+export interface InstanceOverride {
+  personId?: string
+  /** Overrides the job's default time for this occurrence. null clears it (untimed). */
+  time?: string | null
+  /** Hides this occurrence entirely, e.g. "skip laundry this week". */
+  skipped?: boolean
 }
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner'
@@ -84,10 +77,10 @@ export interface ShoppingItem {
 export interface HouseholdState {
   people: Person[]
   jobs: Job[]
-  schedule: ScheduledSlot[]
+  /** key = `${jobId}__${date}` */
+  overrides: Record<string, InstanceOverride>
   /** key = `${jobId}__${date}` */
   completions: Record<string, boolean>
-  lastOptimizedAt: string | null
   meals: MealPlanEntry[]
   shoppingList: ShoppingItem[]
 }
