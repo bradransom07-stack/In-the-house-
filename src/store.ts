@@ -28,11 +28,11 @@ function seedPeople(): SeedPeople {
     role: 'helper',
     color: '#0ea5e9',
     availability: [
-      win(1, '09:00', '15:00'), // Mon
-      win(2, '09:00', '14:20'), // Tue — leaves early for Bella's 2:20pm pickup
-      win(3, '09:00', '15:00'), // Wed
-      win(4, '09:00', '15:00'), // Thu — Thursday late-start school run (8-9am) is before this window
-      win(5, '09:00', '15:00'), // Fri
+      win(1, '05:30', '15:00'), // Mon — starts with breakfast (5:30am), kids leave for school 6:30am
+      win(2, '05:30', '14:20'), // Tue — leaves early for Bella's 2:20pm pickup
+      win(3, '05:30', '15:00'), // Wed
+      win(4, '05:30', '15:00'), // Thu — includes the Thursday 8-9am late-start school run
+      win(5, '05:30', '15:00'), // Fri
     ],
   }
   const trish: Person = {
