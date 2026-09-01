@@ -17,32 +17,50 @@ const win = (day: AvailabilityWindow['day'], start: string, end: string): Availa
   end,
 })
 
-function seedPeople(): [Person, Person, Person] {
-  const helper: Person = {
+type SeedPeople = [gina: Person, trish: Person, brad: Person, jack: Person, bella: Person]
+
+function seedPeople(): SeedPeople {
+  const gina: Person = {
     id: uuid(),
-    name: 'Helper',
+    name: 'Gina',
     role: 'helper',
     color: '#0ea5e9',
     availability: [1, 2, 3, 4, 5].map((d) => win(d as AvailabilityWindow['day'], '09:00', '15:00')),
   }
-  const parent1: Person = {
+  const trish: Person = {
     id: uuid(),
-    name: 'Parent 1',
+    name: 'Trish',
     role: 'family',
     color: '#a855f7',
     availability: [0, 6].map((d) => win(d as AvailabilityWindow['day'], '10:00', '12:00')),
   }
-  const parent2: Person = {
+  const brad: Person = {
     id: uuid(),
-    name: 'Parent 2',
+    name: 'Brad',
     role: 'family',
     color: '#f97316',
     availability: [0, 1, 2, 3, 4, 5, 6].map((d) => win(d as AvailabilityWindow['day'], '19:00', '20:30')),
   }
-  return [helper, parent1, parent2]
+  // Jack and Bella start with no availability set — add windows in the People tab
+  // once you've decided which chores are age-appropriate for them.
+  const jack: Person = {
+    id: uuid(),
+    name: 'Jack',
+    role: 'family',
+    color: '#22c55e',
+    availability: [],
+  }
+  const bella: Person = {
+    id: uuid(),
+    name: 'Bella',
+    role: 'family',
+    color: '#ec4899',
+    availability: [],
+  }
+  return [gina, trish, brad, jack, bella]
 }
 
-function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
+function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
   const base = (partial: Partial<Job> & Pick<Job, 'title' | 'category' | 'durationMinutes' | 'priority'>): Job => ({
     id: uuid(),
     notes: '',
@@ -62,7 +80,7 @@ function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
       durationMinutes: 45,
       priority: 'medium',
       recurrence: 'weekly',
-      lockedPersonId: helper.id,
+      lockedPersonId: gina.id,
     }),
     base({
       title: 'Laundry — wash & fold',
@@ -70,7 +88,7 @@ function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
       durationMinutes: 60,
       priority: 'medium',
       recurrence: 'weekly',
-      lockedPersonId: helper.id,
+      lockedPersonId: gina.id,
     }),
     base({
       title: 'Grocery run',
@@ -78,7 +96,7 @@ function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
       durationMinutes: 60,
       priority: 'high',
       recurrence: 'weekly',
-      eligiblePersonIds: [parent1.id, parent2.id],
+      eligiblePersonIds: [trish.id, brad.id],
     }),
     base({
       title: 'Kids bedtime routine',
@@ -86,7 +104,7 @@ function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
       durationMinutes: 30,
       priority: 'high',
       recurrence: 'daily',
-      eligiblePersonIds: [parent1.id, parent2.id],
+      eligiblePersonIds: [trish.id, brad.id],
     }),
     base({
       title: 'Cook dinner',
@@ -100,6 +118,22 @@ function seedJobs([helper, parent1, parent2]: [Person, Person, Person]): Job[] {
       category: 'maintenance',
       durationMinutes: 30,
       priority: 'low',
+    }),
+    base({
+      title: 'Walk Snoop Dog',
+      category: 'pets',
+      durationMinutes: 20,
+      priority: 'high',
+      recurrence: 'daily',
+      eligiblePersonIds: [trish.id, brad.id, jack.id, bella.id],
+    }),
+    base({
+      title: 'Feed Yupi Hamster',
+      category: 'pets',
+      durationMinutes: 5,
+      priority: 'medium',
+      recurrence: 'daily',
+      eligiblePersonIds: [trish.id, brad.id, jack.id, bella.id],
     }),
   ]
 }
