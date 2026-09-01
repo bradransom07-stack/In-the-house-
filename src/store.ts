@@ -173,6 +173,15 @@ function seedJobs([gina, trish, brad, jack, bella]: SeedPeople): Job[] {
       recurrence: 'daily',
       eligiblePersonIds: [trish.id, brad.id, jack.id, bella.id],
     }),
+    base({
+      title: "Plan tomorrow",
+      notes: 'Sit down and think through what tomorrow needs: school runs, activities, meals, pickups.',
+      category: 'other',
+      durationMinutes: 15,
+      priority: 'medium',
+      recurrence: 'daily',
+      lockedPersonId: gina.id,
+    }),
   ]
 }
 
